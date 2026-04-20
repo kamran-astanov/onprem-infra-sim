@@ -1,0 +1,101 @@
+services:
+
+  # ------------------------------------------------------------------
+  # LOKI — log aggregation (receives logs from all containers)
+  # ------------------------------------------------------------------
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+    networks:
+      - infra
+
+  # ------------------------------------------------------------------
+  # PROMTAIL — log shipper (scrapes Docker container logs → Loki)
+  # ------------------------------------------------------------------
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - infra
+
+  # ------------------------------------------------------------------
+  # GRAFANA — dashboards for logs + metrics
+  # UI: http://localhost:3000
+  # Default login: admin / admin
+  # ------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: grafana
+    restart: unless-stopped
+    depends_on:
+      - loki
+      - prometheus
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    networks:
+      - infra
+
+  # ------------------------------------------------------------------
+  # PROMETHEUS — metrics collection from all services
+  # UI: http://localhost:9090
+  # ------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'
+    networks:
+      - infra
+
+  # ------------------------------------------------------------------
+  # OPENTELEMETRY COLLECTOR — receives traces from apps, exports to Grafana
+  # ------------------------------------------------------------------
+  otel_collector:
+    image: otel/opentelemetry-collector-contrib:0.98.0
+    container_name: otel_collector
+    restart: unless-stopped
+    ports:
+      - "4317:4317"   # gRPC
+      - "4318:4318"   # HTTP
+      - "8888:8888"   # metrics
+    volumes:
+      - ./otel-config.yml:/etc/otelcol-contrib/config.yaml
+    networks:
+      - infra
+
+volumes:
+  loki_data:
+  grafana_data:
+  prometheus_data:
+
+networks:
+  infra:
+    external: true

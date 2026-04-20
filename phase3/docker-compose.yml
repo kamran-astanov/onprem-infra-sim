@@ -1,0 +1,151 @@
+services:
+
+  # ------------------------------------------------------------------
+  # ZOOKEEPER — required by Kafka for coordination
+  # ------------------------------------------------------------------
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    networks:
+      - infra
+
+  # ------------------------------------------------------------------
+  # KAFKA — event streaming between microservices
+  # Broker: localhost:9092
+  # ------------------------------------------------------------------
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - infra
+
+  # ------------------------------------------------------------------
+  # KAFKA UI — visual interface to inspect topics and messages
+  # UI: http://localhost:8090
+  # ------------------------------------------------------------------
+  kafka_ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka_ui
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - infra
+
+  # ------------------------------------------------------------------
+  # POSTGRESQL — main application database
+  # Port: 5432
+  # ------------------------------------------------------------------
+  app_db:
+    image: postgres:15
+    container_name: app_db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppass123
+      POSTGRES_DB: appdb
+    volumes:
+      - app_db_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql  # seed data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d appdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - infra
+
+
+  # ------------------------------------------------------------------
+  # ORDER SERVICE — Java/Spring Boot microservice
+  # Port: 8085
+  # ------------------------------------------------------------------
+  order_service:
+    image: kastanov7/order-service:latest
+    container_name: order_service
+    restart: unless-stopped
+    ports:
+      - "8085:8080"
+      - "8888:8888"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://app_db:5432/appdb
+      SPRING_DATASOURCE_USERNAME: appuser
+      SPRING_DATASOURCE_PASSWORD: apppass123
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KEYCLOAK_JWK_URI: http://keycloak:8080/realms/infra-sim/protocol/openid-connect/certs
+    depends_on:
+      app_db:
+        condition: service_healthy
+    networks:
+      - infra
+
+  # ------------------------------------------------------------------
+  # FRONTEND — Node.js frontend app
+  # UI: http://localhost:3000
+  # ------------------------------------------------------------------
+  frontend:
+    image: kastanov7/frontend:latest
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      KEYCLOAK_URL: http://localhost:8180
+      KEYCLOAK_REALM: infra-sim
+      KEYCLOAK_CLIENT: order-app
+    networks:
+      - infra
+
+  # ------------------------------------------------------------------
+  # APACHE — reverse proxy: port 80 → app services
+  # UI: http://localhost:80
+  # ------------------------------------------------------------------
+  apache:
+    image: httpd:2.4
+    container_name: apache
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./httpd.conf:/usr/local/apache2/conf/httpd.conf
+    networks:
+      - infra
+
+volumes:
+  zookeeper_data:
+  zookeeper_log:
+  kafka_data:
+  app_db_data:
+
+networks:
+  infra:
+    external: true
