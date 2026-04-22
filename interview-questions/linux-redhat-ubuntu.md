@@ -185,8 +185,11 @@ With SELinux: Apache is only allowed to access web content directories — acces
 
 
 ausearch -m avc -ts recent
+
 ausearch = search the logs
+
 -m avc = show only SELinux blocks
+
 -ts recent = from recent time only
 
 **Plain English: "Show me what SELinux blocked recently"**
@@ -195,8 +198,11 @@ ausearch = search the logs
 
 
 ls -Z /data/website
+
 ls = list files (you know this)
+
 -Z = also show the SELinux label
+
 
 **Plain English: "List files and show me their wristbands"**
 
@@ -204,18 +210,26 @@ ls = list files (you know this)
 
 
 semanage fcontext -a -t httpd_sys_content_t "/data/website(/.*)?"
+
 semanage = SELinux settings tool
+
 fcontext = we're changing a folder's wristband
+
 -a = add new rule
+
 -t httpd_sys_content_t = the wristband name (Apache's wristband)
+
 "/data/website(/.*)?" = apply to this folder and everything inside it
 
 **Plain English: "Write a rule: give Apache's wristband to this folder"**
 
 
 restorecon -Rv /data/website
+
 restorecon = apply the saved rules to actual files
+
 -R = do it recursively (all subfolders too)
+
 -v = show me what you're changing
 
 **Plain English: "Now actually stick the wristband on the folder"**
@@ -224,8 +238,11 @@ restorecon = apply the saved rules to actual files
 
 
 systemctl restart httpd
+
 curl http://localhost
+
 systemctl restart httpd = restart Apache
+
 curl http://localhost = test if website loads
 
 **Plain English: "Restart Apache and check if it works now"**
