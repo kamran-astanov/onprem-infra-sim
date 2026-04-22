@@ -181,76 +181,49 @@ Without SELinux: if Apache is compromised, attacker could read /etc/ssh/ keys.
 With SELinux: Apache is only allowed to access web content directories — accessing SSH keys is blocked even as root.
 
 
-**Step 1 — Check if SELinux is blocking it**
+Step 1
 
-
-**Look for denials in the log**
 
 ausearch -m avc -ts recent
+ausearch = search the logs
+-m avc = show only SELinux blocks
+-ts recent = from recent time only
+Plain English: "Show me what SELinux blocked recently"
 
+Step 2
 
-
-
-**Step 2 — See the current context on the directory**
-
-
-**ls -Z /data/website**
-
-Output: unconfined_u:object_r:default_t:s0  (wrong type for Apache)
-
-
-
-
-**Step 3 — Fix the context**
-
-
-**Apply correct SELinux type to your directory**
-
-semanage fcontext -a -t httpd_sys_content_t "/data/website(/.*)?"
-
-
-**Restore the context**
-
-restorecon -Rv /data/website
-
-
-**Verify**
 
 ls -Z /data/website
+ls = list files (you know this)
+-Z = also show the SELinux label
+Plain English: "List files and show me their wristbands"
 
-Now shows: httpd_sys_content_t
+Step 3
 
 
-**Step 4 — Test Apache**
+semanage fcontext -a -t httpd_sys_content_t "/data/website(/.*)?"
+semanage = SELinux settings tool
+fcontext = we're changing a folder's wristband
+-a = add new rule
+-t httpd_sys_content_t = the wristband name (Apache's wristband)
+"/data/website(/.*)?" = apply to this folder and everything inside it
+Plain English: "Write a rule: give Apache's wristband to this folder"
+
+
+restorecon -Rv /data/website
+restorecon = apply the saved rules to actual files
+-R = do it recursively (all subfolders too)
+-v = show me what you're changing
+Plain English: "Now actually stick the wristband on the folder"
+
+Step 4
 
 
 systemctl restart httpd
-
-
-
-
-**-a
-Short for add. You're adding a new rule. Other options are:**
-
-
--m = modify existing rule
-
--d = delete rule
-
--l = list all rules
-
--t = type. 
-
-
-**httpd_sys_content_t means:**
-
-
-httpd = Apache/Nginx web server
-
-sys_content = static content the server is allowed to read
-
-_t = suffix meaning it's a type
-
+curl http://localhost
+systemctl restart httpd = restart Apache
+curl http://localhost = test if website loads
+Plain English: "Restart Apache and check if it works now"
 
 
 ---
