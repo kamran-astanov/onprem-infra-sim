@@ -193,27 +193,35 @@ tail -f /var/log/audit/audit.log | grep denied
 **Step 2 — See the current context on the directory**
 
 **ls -Z /data/website**
+
 Output: unconfined_u:object_r:default_t:s0  (wrong type for Apache)
 
 ls -Z /var/www/html
+
 Output: system_u:object_r:httpd_sys_content_t:s0  (correct type)
 
 **Step 3 — Fix the context**
 
 **Apply correct SELinux type to your directory**
+
 semanage fcontext -a -t httpd_sys_content_t "/data/website(/.*)?"
 
 **Restore the context**
+
 restorecon -Rv /data/website
 
 **Verify**
+
 ls -Z /data/website
+
 Now shows: httpd_sys_content_t
 
 **Step 4 — Test Apache**
 
 systemctl restart httpd
+
 curl http://localhost
+
 **Now works**
 
 -a
