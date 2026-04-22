@@ -180,7 +180,9 @@ Web server can't read SSH keys
 Without SELinux: if Apache is compromised, attacker could read /etc/ssh/ keys.
 With SELinux: Apache is only allowed to access web content directories — accessing SSH keys is blocked even as root.
 
+
 **Step 1 — Check if SELinux is blocking it**
+
 
 **Look for denials in the log**
 
@@ -190,7 +192,9 @@ or
 
 tail -f /var/log/audit/audit.log | grep denied
 
+
 **Step 2 — See the current context on the directory**
+
 
 **ls -Z /data/website**
 
@@ -200,15 +204,19 @@ ls -Z /var/www/html
 
 Output: system_u:object_r:httpd_sys_content_t:s0  (correct type)
 
+
 **Step 3 — Fix the context**
+
 
 **Apply correct SELinux type to your directory**
 
 semanage fcontext -a -t httpd_sys_content_t "/data/website(/.*)?"
 
+
 **Restore the context**
 
 restorecon -Rv /data/website
+
 
 **Verify**
 
@@ -216,7 +224,9 @@ ls -Z /data/website
 
 Now shows: httpd_sys_content_t
 
+
 **Step 4 — Test Apache**
+
 
 systemctl restart httpd
 
@@ -224,20 +234,30 @@ curl http://localhost
 
 **Now works**
 
--a
-Short for add. You're adding a new rule. Other options are:
+
+**-a
+Short for add. You're adding a new rule. Other options are:**
+
 
 -m = modify existing rule
+
 -d = delete rule
+
 -l = list all rules
+
 -t httpd_sys_content_t
+
 -t = type. You're assigning the SELinux type httpd_sys_content_t to the path.
 
-httpd_sys_content_t means:
+**httpd_sys_content_t means:**
+
 
 httpd = Apache/Nginx web server
+
 sys_content = static content the server is allowed to read
+
 _t = suffix meaning it's a type
+
 This label tells SELinux: "Apache is allowed to read files with this label."
 
 ---
