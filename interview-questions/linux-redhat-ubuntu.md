@@ -182,34 +182,39 @@ With SELinux: Apache is only allowed to access web content directories — acces
 
 **Step 1 — Check if SELinux is blocking it**
 
-Look for denials in the log
+**Look for denials in the log**
+
 ausearch -m avc -ts recent
 
 or
+
 tail -f /var/log/audit/audit.log | grep denied
 
 **Step 2 — See the current context on the directory**
-ls -Z /data/website
+
+**ls -Z /data/website**
 Output: unconfined_u:object_r:default_t:s0  (wrong type for Apache)
 
 ls -Z /var/www/html
 Output: system_u:object_r:httpd_sys_content_t:s0  (correct type)
 
 **Step 3 — Fix the context**
-Apply correct SELinux type to your directory
+
+**Apply correct SELinux type to your directory**
 semanage fcontext -a -t httpd_sys_content_t "/data/website(/.*)?"
 
-Restore the context
+**Restore the context**
 restorecon -Rv /data/website
 
-Verify
+**Verify**
 ls -Z /data/website
 Now shows: httpd_sys_content_t
 
 **Step 4 — Test Apache**
+
 systemctl restart httpd
 curl http://localhost
-Now works
+**Now works**
 
 -a
 Short for add. You're adding a new rule. Other options are:
