@@ -188,9 +188,7 @@ With SELinux: Apache is only allowed to access web content directories — acces
 
 ausearch -m avc -ts recent
 
-or
 
-tail -f /var/log/audit/audit.log | grep denied
 
 
 **Step 2 — See the current context on the directory**
@@ -200,9 +198,7 @@ tail -f /var/log/audit/audit.log | grep denied
 
 Output: unconfined_u:object_r:default_t:s0  (wrong type for Apache)
 
-ls -Z /var/www/html
 
-Output: system_u:object_r:httpd_sys_content_t:s0  (correct type)
 
 
 **Step 3 — Fix the context**
@@ -230,9 +226,7 @@ Now shows: httpd_sys_content_t
 
 systemctl restart httpd
 
-curl http://localhost
 
-**Now works**
 
 
 **-a
@@ -245,9 +239,8 @@ Short for add. You're adding a new rule. Other options are:**
 
 -l = list all rules
 
--t httpd_sys_content_t
+-t = type. 
 
--t = type. You're assigning the SELinux type httpd_sys_content_t to the path.
 
 **httpd_sys_content_t means:**
 
@@ -258,7 +251,7 @@ sys_content = static content the server is allowed to read
 
 _t = suffix meaning it's a type
 
-This label tells SELinux: "Apache is allowed to read files with this label."
+
 
 ---
 
