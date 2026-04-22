@@ -181,24 +181,26 @@ Without SELinux: if Apache is compromised, attacker could read /etc/ssh/ keys.
 With SELinux: Apache is only allowed to access web content directories — accessing SSH keys is blocked even as root.
 
 
-Step 1
+**Step 1**
 
 
 ausearch -m avc -ts recent
 ausearch = search the logs
 -m avc = show only SELinux blocks
 -ts recent = from recent time only
-Plain English: "Show me what SELinux blocked recently"
 
-Step 2
+**Plain English: "Show me what SELinux blocked recently"**
+
+**Step 2**
 
 
 ls -Z /data/website
 ls = list files (you know this)
 -Z = also show the SELinux label
-Plain English: "List files and show me their wristbands"
 
-Step 3
+**Plain English: "List files and show me their wristbands"**
+
+**Step 3**
 
 
 semanage fcontext -a -t httpd_sys_content_t "/data/website(/.*)?"
@@ -207,23 +209,26 @@ fcontext = we're changing a folder's wristband
 -a = add new rule
 -t httpd_sys_content_t = the wristband name (Apache's wristband)
 "/data/website(/.*)?" = apply to this folder and everything inside it
-Plain English: "Write a rule: give Apache's wristband to this folder"
+
+**Plain English: "Write a rule: give Apache's wristband to this folder"**
 
 
 restorecon -Rv /data/website
 restorecon = apply the saved rules to actual files
 -R = do it recursively (all subfolders too)
 -v = show me what you're changing
-Plain English: "Now actually stick the wristband on the folder"
 
-Step 4
+**Plain English: "Now actually stick the wristband on the folder"**
+
+**Step 4**
 
 
 systemctl restart httpd
 curl http://localhost
 systemctl restart httpd = restart Apache
 curl http://localhost = test if website loads
-Plain English: "Restart Apache and check if it works now"
+
+**Plain English: "Restart Apache and check if it works now"**
 
 
 ---
